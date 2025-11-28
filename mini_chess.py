@@ -1,9 +1,10 @@
-import sys
 import random
-import pygame
+import sys
 from dataclasses import dataclass
 from enum import Enum
 from typing import List, Optional, Tuple
+
+import pygame
 
 # =========================
 # Konfigurasi Tampilan
@@ -12,10 +13,11 @@ WIDTH, HEIGHT = 640, 640
 ROWS, COLS = 8, 8
 SQ_SIZE = WIDTH // COLS
 
-COLOR_LIGHT = (240, 217, 181)   # terang
-COLOR_DARK = (181, 136, 99)     # gelap
+COLOR_LIGHT = (240, 217, 181)  # terang
+COLOR_DARK = (181, 136, 99)  # gelap
 COLOR_HIGHLIGHT = (246, 246, 105)  # highlight kotak terpilih
 COLOR_MOVE_HINT = (100, 180, 255)  # hint gerak
+
 
 # =========================
 # Representasi Bidak
@@ -24,27 +26,29 @@ class Color(Enum):
     WHITE = 1
     BLACK = 2
 
+
 class PieceType(Enum):
-    KING   = "K"
-    QUEEN  = "Q"
-    ROOK   = "R"
+    KING = "K"
+    QUEEN = "Q"
+    ROOK = "R"
     BISHOP = "B"
     KNIGHT = "N"
-    PAWN   = "P"
+    PAWN = "P"
+
 
 UNICODE_PIECES = {
-    (Color.WHITE, PieceType.KING):   "♔",
-    (Color.WHITE, PieceType.QUEEN):  "♕",
-    (Color.WHITE, PieceType.ROOK):   "♖",
+    (Color.WHITE, PieceType.KING): "♔",
+    (Color.WHITE, PieceType.QUEEN): "♕",
+    (Color.WHITE, PieceType.ROOK): "♖",
     (Color.WHITE, PieceType.BISHOP): "♗",
     (Color.WHITE, PieceType.KNIGHT): "♘",
-    (Color.WHITE, PieceType.PAWN):   "♙",
-    (Color.BLACK, PieceType.KING):   "♚",
-    (Color.BLACK, PieceType.QUEEN):  "♛",
-    (Color.BLACK, PieceType.ROOK):   "♜",
+    (Color.WHITE, PieceType.PAWN): "♙",
+    (Color.BLACK, PieceType.KING): "♚",
+    (Color.BLACK, PieceType.QUEEN): "♛",
+    (Color.BLACK, PieceType.ROOK): "♜",
     (Color.BLACK, PieceType.BISHOP): "♝",
     (Color.BLACK, PieceType.KNIGHT): "♞",
-    (Color.BLACK, PieceType.PAWN):   "♟",
+    (Color.BLACK, PieceType.PAWN): "♟",
 }
 
 # Nilai evaluasi material sederhana
@@ -57,10 +61,12 @@ PIECE_VALUES = {
     PieceType.KING: 0,  # biasanya 1000+, tapi untuk engine mini kita 0 agar fokus capture gratis
 }
 
+
 @dataclass
 class Piece:
     color: Color
     kind: PieceType
+
 
 @dataclass
 class Move:
@@ -68,13 +74,16 @@ class Move:
     dst: Tuple[int, int]
     promotion: Optional[PieceType] = None
 
+
 # =========================
 # Board: representasi papan + state
 # =========================
 class Board:
     def __init__(self):
         # Matriks 8x8: (row, col) dengan 0 di atas (rank 8) dan 7 di bawah (rank 1)
-        self.grid: List[List[Optional[Piece]]] = [[None for _ in range(COLS)] for _ in range(ROWS)]
+        self.grid: List[List[Optional[Piece]]] = [
+            [None for _ in range(COLS)] for _ in range(ROWS)
+        ]
         self.turn: Color = Color.WHITE
         self._setup_initial()
 
@@ -123,16 +132,21 @@ class Board:
         self.grid[sr][sc] = None
         # Promotion sederhana otomatis jadi Queen
         if piece and piece.kind == PieceType.PAWN:
-            if (piece.color == Color.WHITE and dr == 0) or (piece.color == Color.BLACK and dr == 7):
+            if (piece.color == Color.WHITE and dr == 0) or (
+                piece.color == Color.BLACK and dr == 7
+            ):
                 self.grid[dr][dc] = Piece(piece.color, PieceType.QUEEN)
         # Ganti giliran
         self.turn = Color.BLACK if self.turn == Color.WHITE else Color.WHITE
 
     def copy(self) -> "Board":
         b = Board.__new__(Board)  # bypass __init__
-        b.grid = [[(Piece(p.color, p.kind) if p else None) for p in row] for row in self.grid]
+        b.grid = [
+            [(Piece(p.color, p.kind) if p else None) for p in row] for row in self.grid
+        ]
         b.turn = self.turn
         return b
+
 
 # =========================
 # Rules: generate langkah pseudo-legal (tanpa cek skak untuk kesederhanaan)
@@ -151,11 +165,44 @@ class Rules:
                 elif p.kind == PieceType.KNIGHT:
                     moves.extend(Rules._knight_moves(board, r, c, p))
                 elif p.kind == PieceType.BISHOP:
-                    moves.extend(Rules._slide_moves(board, r, c, p, directions=[(-1,-1),(-1,1),(1,-1),(1,1)]))
+                    moves.extend(
+                        Rules._slide_moves(
+                            board,
+                            r,
+                            c,
+                            p,
+                            directions=[(-1, -1), (-1, 1), (1, -1), (1, 1)],
+                        )
+                    )
                 elif p.kind == PieceType.ROOK:
-                    moves.extend(Rules._slide_moves(board, r, c, p, directions=[(-1,0),(1,0),(0,-1),(0,1)]))
+                    moves.extend(
+                        Rules._slide_moves(
+                            board,
+                            r,
+                            c,
+                            p,
+                            directions=[(-1, 0), (1, 0), (0, -1), (0, 1)],
+                        )
+                    )
                 elif p.kind == PieceType.QUEEN:
-                    moves.extend(Rules._slide_moves(board, r, c, p, directions=[(-1,-1),(-1,1),(1,-1),(1,1),(-1,0),(1,0),(0,-1),(0,1)]))
+                    moves.extend(
+                        Rules._slide_moves(
+                            board,
+                            r,
+                            c,
+                            p,
+                            directions=[
+                                (-1, -1),
+                                (-1, 1),
+                                (1, -1),
+                                (1, 1),
+                                (-1, 0),
+                                (1, 0),
+                                (0, -1),
+                                (0, 1),
+                            ],
+                        )
+                    )
                 elif p.kind == PieceType.KING:
                     moves.extend(Rules._king_moves(board, r, c, p))
         return moves
@@ -170,8 +217,12 @@ class Rules:
         if board.inside(nr, c) and board.piece_at(nr, c) is None:
             moves.append(Move((r, c), (nr, c)))
             # maju 2 dari posisi awal
-            nr2 = r + 2*dir_
-            if r == start_row and board.inside(nr2, c) and board.piece_at(nr2, c) is None:
+            nr2 = r + 2 * dir_
+            if (
+                r == start_row
+                and board.inside(nr2, c)
+                and board.piece_at(nr2, c) is None
+            ):
                 moves.append(Move((r, c), (nr2, c)))
         # makan diagonal
         for dc in (-1, 1):
@@ -186,9 +237,18 @@ class Rules:
     @staticmethod
     def _knight_moves(board: Board, r: int, c: int, p: Piece) -> List[Move]:
         moves: List[Move] = []
-        for dr, dc in [(-2,-1),(-2,1),(-1,-2),(-1,2),(1,-2),(1,2),(2,-1),(2,1)]:
-            nr, nc = r+dr, c+dc
-            if not board.inside(nr, nc): 
+        for dr, dc in [
+            (-2, -1),
+            (-2, 1),
+            (-1, -2),
+            (-1, 2),
+            (1, -2),
+            (1, 2),
+            (2, -1),
+            (2, 1),
+        ]:
+            nr, nc = r + dr, c + dc
+            if not board.inside(nr, nc):
                 continue
             target = board.piece_at(nr, nc)
             if target is None or target.color != p.color:
@@ -196,7 +256,9 @@ class Rules:
         return moves
 
     @staticmethod
-    def _slide_moves(board: Board, r: int, c: int, p: Piece, directions: List[Tuple[int,int]]) -> List[Move]:
+    def _slide_moves(
+        board: Board, r: int, c: int, p: Piece, directions: List[Tuple[int, int]]
+    ) -> List[Move]:
         moves: List[Move] = []
         for dr, dc in directions:
             nr, nc = r + dr, c + dc
@@ -219,7 +281,7 @@ class Rules:
             for dc in (-1, 0, 1):
                 if dr == 0 and dc == 0:
                     continue
-                nr, nc = r+dr, c+dc
+                nr, nc = r + dr, c + dc
                 if not board.inside(nr, nc):
                     continue
                 target = board.piece_at(nr, nc)
@@ -227,6 +289,7 @@ class Rules:
                     moves.append(Move((r, c), (nr, nc)))
         # (Tidak implement castling demi kesederhanaan)
         return moves
+
 
 # =========================
 # Evaluator dan AI Sederhana
@@ -250,6 +313,7 @@ class Evaluator:
         if target:
             return PIECE_VALUES[target.kind]
         return 0
+
 
 class SimpleAI:
     def __init__(self, color: Color):
@@ -285,6 +349,7 @@ class SimpleAI:
         # 3) Fallback random bila skornya sama saja
         return best_move or random.choice(moves)
 
+
 # =========================
 # UI / Rendering (Pygame)
 # =========================
@@ -315,17 +380,19 @@ class Renderer:
             font = pygame.font.SysFont(None, int(SQ_SIZE * 0.8))
         self.font = font
 
-    def draw_board(self, selected: Optional[Tuple[int,int]] = None, moves: List[Move] = []):
+    def draw_board(
+        self, selected: Optional[Tuple[int, int]] = None, moves: List[Move] = []
+    ):
         # Gambar kotak
         for r in range(ROWS):
             for c in range(COLS):
                 color = COLOR_LIGHT if (r + c) % 2 == 0 else COLOR_DARK
-                rect = pygame.Rect(c*SQ_SIZE, r*SQ_SIZE, SQ_SIZE, SQ_SIZE)
+                rect = pygame.Rect(c * SQ_SIZE, r * SQ_SIZE, SQ_SIZE, SQ_SIZE)
                 pygame.draw.rect(self.screen, color, rect)
         # Highlight kotak terpilih
         if selected:
             sr, sc = selected
-            rect = pygame.Rect(sc*SQ_SIZE, sr*SQ_SIZE, SQ_SIZE, SQ_SIZE)
+            rect = pygame.Rect(sc * SQ_SIZE, sr * SQ_SIZE, SQ_SIZE, SQ_SIZE)
             pygame.draw.rect(self.screen, COLOR_HIGHLIGHT, rect, border_radius=6)
 
         # Hint langkah dari petak terpilih
@@ -334,8 +401,8 @@ class Renderer:
             for mv in moves:
                 if mv.src == (sr, sc):
                     dr, dc = mv.dst
-                    cx = dc*SQ_SIZE + SQ_SIZE//2
-                    cy = dr*SQ_SIZE + SQ_SIZE//2
+                    cx = dc * SQ_SIZE + SQ_SIZE // 2
+                    cy = dr * SQ_SIZE + SQ_SIZE // 2
                     pygame.draw.circle(self.screen, COLOR_MOVE_HINT, (cx, cy), 8)
 
     def draw_pieces(self, board: Board):
@@ -345,8 +412,14 @@ class Renderer:
                 if p:
                     sym = UNICODE_PIECES[(p.color, p.kind)]
                     text = self.font.render(sym, True, (20, 20, 20))
-                    tr = text.get_rect(center=(c*SQ_SIZE + SQ_SIZE//2, r*SQ_SIZE + SQ_SIZE//2 + 2))
+                    tr = text.get_rect(
+                        center=(
+                            c * SQ_SIZE + SQ_SIZE // 2,
+                            r * SQ_SIZE + SQ_SIZE // 2 + 2,
+                        )
+                    )
                     self.screen.blit(text, tr)
+
 
 # =========================
 # Game: mengikat semuanya
@@ -361,8 +434,10 @@ class Game:
         self.renderer = Renderer(self.screen)
         self.human_color = human_color
         self.ai = SimpleAI(Color.BLACK if human_color == Color.WHITE else Color.WHITE)
-        self.selected_sq: Optional[Tuple[int,int]] = None
-        self.legal_moves_cache: List[Move] = Rules.generate_moves(self.board, self.board.turn)
+        self.selected_sq: Optional[Tuple[int, int]] = None
+        self.legal_moves_cache: List[Move] = Rules.generate_moves(
+            self.board, self.board.turn
+        )
         self.running = True
 
     def run(self):
@@ -383,13 +458,13 @@ class Game:
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 self._handle_click(pygame.mouse.get_pos())
 
-    def _board_coords_from_mouse(self, pos: Tuple[int,int]) -> Tuple[int,int]:
+    def _board_coords_from_mouse(self, pos: Tuple[int, int]) -> Tuple[int, int]:
         x, y = pos
         c = x // SQ_SIZE
         r = y // SQ_SIZE
         return (r, c)
 
-    def _handle_click(self, pos: Tuple[int,int]):
+    def _handle_click(self, pos: Tuple[int, int]):
         if self.board.turn != self.human_color:
             return  # bukan giliran manusia
 
@@ -447,10 +522,13 @@ class Game:
         moves_from_selected = []
         if self.selected_sq:
             sr, sc = self.selected_sq
-            moves_from_selected = [m for m in self.legal_moves_cache if m.src == (sr, sc)]
+            moves_from_selected = [
+                m for m in self.legal_moves_cache if m.src == (sr, sc)
+            ]
         self.renderer.draw_board(self.selected_sq, moves_from_selected)
         self.renderer.draw_pieces(self.board)
         pygame.display.flip()
+
 
 # =========================
 # Entry Point
